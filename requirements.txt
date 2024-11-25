@@ -1,0 +1,4 @@
+discord.py==2.4.0
+jsonlib-python3==1.6.1
+asyncio==3.4.3
+python-dotenv==1.0.1
