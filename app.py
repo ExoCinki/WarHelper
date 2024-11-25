@@ -189,7 +189,7 @@ class WeaponSelect(Select):
 
 
 async def update_recap_message(war_id, channel):
-    """Met à jour le message de récapitulatif avec des émojis pour chaque rôle."""
+    """Met à jour le message de récapitulatif avec des émojis pour chaque rôle répartis sur deux colonnes."""
     war = wars[war_id]
 
     async with war.recap_lock:
@@ -201,7 +201,7 @@ async def update_recap_message(war_id, channel):
         total_inscriptions = len(unique_users)  # Nombre d'utilisateurs uniques
 
         embed = discord.Embed(
-            title=f"{war.name} (ID: {war.id}) \u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003.",
+            title=f"{war.name} (ID: {war.id})   \u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003.",
             description=f"Total des inscrits : **{total_inscriptions}**",
             color=discord.Color.blue()
         )
@@ -216,37 +216,43 @@ async def update_recap_message(war_id, channel):
             "DPS": "🔥"        # Feu
         }
 
-        # Créer les colonnes
-        column_1, column_2, column_3 = [], [], []
+        # Diviser les rôles en deux colonnes
         roles = ["Tank", "Healer", "Debuffer", "Bruiser", "Assassins", "DPS"]
+        column_1 = []
+        column_2 = []
 
         for i, role in enumerate(roles):
             participants = war.registrations[role]
             emoji = emoji_mapping.get(role, "")  # Ajoute l'émoji associé
+
+            # Total des participants pour ce rôle
+            role_total = len(participants)
+
+            # Contenu des participants
             content = "\n".join(
                 [f"**{p['name']}** ({p['weight']} | {p['weapon']} + {p['weapon_2']})" for p in participants]
             ) or "*Aucun inscrit*"
 
-            # Ajouter l'émoji à la catégorie
-            role_header = f"{emoji} **{role}**"
+            # Ajouter l'émoji, le rôle et le total
+            role_header = f"{emoji} **{role} ({role_total})**"
+            role_content = f"{role_header}\n{content}"
 
             # Répartir les rôles entre les colonnes
-            if i % 3 == 0:
-                column_1.append(f"{role_header}\n{content}")
-            elif i % 3 == 1:
-                column_2.append(f"{role_header}\n{content}")
-            else:
-                column_3.append(f"{role_header}\n{content}")
+            if i % 2 == 0:  # Rôles pairs dans la colonne 1
+                column_1.append(role_content)
+            else:           # Rôles impairs dans la colonne 2
+                column_2.append(role_content)
 
-        # Ajout des colonnes au message embed
-        embed.add_field(name="\u2003", value="\n\n".join(column_1), inline=True)
-        embed.add_field(name="\u2003", value="\n\n".join(column_2), inline=True)
-        embed.add_field(name="\u2003", value="\n\n".join(column_3), inline=True)
+        # Ajouter les colonnes au message embed
+        embed.add_field(name="", value="\n\n".join(column_1), inline=True)
+        embed.add_field(name="", value="\n\n".join(column_2), inline=True)
 
+        # Éditer ou envoyer le message récapitulatif
         if war.recap_message:
             await war.recap_message.edit(embed=embed)
         else:
             war.recap_message = await channel.send(embed=embed)
+
 
 
 
