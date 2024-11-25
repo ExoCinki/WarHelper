@@ -49,12 +49,12 @@ class RegistrationView(View):
 class RoleSelect(Select):
     def __init__(self, war_id):
         super().__init__(placeholder="Choisissez un rôle", options=[
-            discord.SelectOption(label="Tank", description=""),
-            discord.SelectOption(label="Healer", description=""),
-            discord.SelectOption(label="Debuffer", description=""),
-            discord.SelectOption(label="Bruiser", description=""),
-            discord.SelectOption(label="Assassins", description=""),
-            discord.SelectOption(label="DPS", description="")
+            discord.SelectOption(label="Tank", emoji="🛡️"),
+            discord.SelectOption(label="Healer", emoji="💉"),
+            discord.SelectOption(label="Debuffer", emoji="🌀"),
+            discord.SelectOption(label="Bruiser", emoji="⚔️"),
+            discord.SelectOption(label="Assassins", emoji="🔪"),
+            discord.SelectOption(label="DPS", emoji="🔥")
         ])
         self.war_id = war_id
 
@@ -82,6 +82,7 @@ class RoleSelect(Select):
             await interaction.followup.send("Une erreur est survenue.", ephemeral=True)
 
 
+
 class ArmorWeightView(View):
     def __init__(self, war_id, user_data):
         super().__init__(timeout=None)
@@ -91,9 +92,9 @@ class ArmorWeightView(View):
 class ArmorWeightSelect(Select):
     def __init__(self, war_id, user_data):
         super().__init__(placeholder="Choisissez un poids d'armure", options=[
-            discord.SelectOption(label="Léger", description=""),
-            discord.SelectOption(label="Moyen", description=""),
-            discord.SelectOption(label="Lourd", description="")
+            discord.SelectOption(label="Léger", emoji="⚡"),   # Symbole pour léger
+            discord.SelectOption(label="Moyen", emoji="🏋️"), # Symbole pour moyen
+            discord.SelectOption(label="Lourd", emoji="🛡️")  # Symbole pour lourd
         ])
         self.war_id = war_id
         self.user_data = user_data
@@ -115,6 +116,7 @@ class ArmorWeightSelect(Select):
             await interaction.followup.send("Une erreur est survenue.", ephemeral=True)
 
 
+
 class WeaponSelectView(View):
     def __init__(self, war_id, user_data, placeholder):
         super().__init__(timeout=None)
@@ -124,21 +126,21 @@ class WeaponSelectView(View):
 class WeaponSelect(Select):
     def __init__(self, war_id, user_data, placeholder):
         super().__init__(placeholder=placeholder, options=[
-            discord.SelectOption(label="SnS", description="Épée et Bouclier"),
-            discord.SelectOption(label="FnS", description="Hachette et Bouclier"),
-            discord.SelectOption(label="WH", description="Marteau de Guerre"),
-            discord.SelectOption(label="GA", description="Hache Double"),
-            discord.SelectOption(label="Spear", description="Lance"),
-            discord.SelectOption(label="Hatchet", description="Hachette"),
-            discord.SelectOption(label="Bow", description="Arc"),
-            discord.SelectOption(label="Musket", description="Mousquet"),
-            discord.SelectOption(label="FS", description="Bâton de Feu"),
-            discord.SelectOption(label="LS", description="Bâton de Vie"),
-            discord.SelectOption(label="IG", description="Gantelet de Glace"),
-            discord.SelectOption(label="VG", description="Gantelet du Néant"),
-            discord.SelectOption(label="Rapier", description="Rapière"),
-            discord.SelectOption(label="BB", description="Tromblon"),
-            discord.SelectOption(label="GS", description="Grande Épée")
+            discord.SelectOption(label="SnS", description="Épée et Bouclier", emoji="🛡️"),
+            discord.SelectOption(label="FnS", description="Hachette et Bouclier", emoji="🪓"),
+            discord.SelectOption(label="WH", description="Marteau de Guerre", emoji="🔨"),
+            discord.SelectOption(label="GA", description="Hache Double", emoji="🪓"),
+            discord.SelectOption(label="Spear", description="Lance", emoji="🔱"),
+            discord.SelectOption(label="Hatchet", description="Hachette", emoji="🪓"),
+            discord.SelectOption(label="Bow", description="Arc", emoji="🏹"),
+            discord.SelectOption(label="Musket", description="Mousquet", emoji="🔫"),
+            discord.SelectOption(label="FS", description="Bâton de Feu", emoji="🔥"),
+            discord.SelectOption(label="LS", description="Bâton de Vie", emoji="💚"),
+            discord.SelectOption(label="IG", description="Gantelet de Glace", emoji="❄️"),
+            discord.SelectOption(label="VG", description="Gantelet du Néant", emoji="⚫"),
+            discord.SelectOption(label="Rapier", description="Rapière", emoji="🗡️"),
+            discord.SelectOption(label="BB", description="Tromblon", emoji="🎇"),
+            discord.SelectOption(label="GS", description="Grande Épée", emoji="⚔️")
         ])
         self.war_id = war_id
         self.user_data = user_data
@@ -185,8 +187,9 @@ class WeaponSelect(Select):
             await interaction.followup.send("Une erreur est survenue.", ephemeral=True)
 
 
+
 async def update_recap_message(war_id, channel):
-    """Met à jour le message de récapitulatif sous forme d'embed avec compteurs."""
+    """Met à jour le message de récapitulatif avec des émojis pour chaque rôle."""
     war = wars[war_id]
 
     async with war.recap_lock:
@@ -198,29 +201,55 @@ async def update_recap_message(war_id, channel):
         total_inscriptions = len(unique_users)  # Nombre d'utilisateurs uniques
 
         embed = discord.Embed(
-            title=f"{war.name} (ID: {war.id})",
+            title=f"{war.name} (ID: {war.id}) \u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003.",
             description=f"Total des inscrits : **{total_inscriptions}**",
             color=discord.Color.blue()
         )
 
-        for role, participants in war.registrations.items():
-            role_count = len(participants)
-            if participants:
-                value = "\n".join(
-                    [f"• **{p['name']}** | {p['weight']} | {p['weapon']} + {p['weapon_2']}" for p in participants]
-                )
+        # Ajouter des émojis pour chaque rôle
+        emoji_mapping = {
+            "Tank": "🛡️",      # Bouclier
+            "Healer": "💉",    # Seringue ou soin
+            "Debuffer": "🌀",  # Vortex
+            "Bruiser": "⚔️",   # Épées croisées
+            "Assassins": "🔪", # Couteau
+            "DPS": "🔥"        # Feu
+        }
+
+        # Créer les colonnes
+        column_1, column_2, column_3 = [], [], []
+        roles = ["Tank", "Healer", "Debuffer", "Bruiser", "Assassins", "DPS"]
+
+        for i, role in enumerate(roles):
+            participants = war.registrations[role]
+            emoji = emoji_mapping.get(role, "")  # Ajoute l'émoji associé
+            content = "\n".join(
+                [f"**{p['name']}** ({p['weight']} | {p['weapon']} + {p['weapon_2']})" for p in participants]
+            ) or "*Aucun inscrit*"
+
+            # Ajouter l'émoji à la catégorie
+            role_header = f"{emoji} **{role}**"
+
+            # Répartir les rôles entre les colonnes
+            if i % 3 == 0:
+                column_1.append(f"{role_header}\n{content}")
+            elif i % 3 == 1:
+                column_2.append(f"{role_header}\n{content}")
             else:
-                value = "*Aucun inscrit*"
-            embed.add_field(
-                name=f"{role} ({role_count})",  # Ajout du compteur par rôle
-                value=value,
-                inline=False
-            )
+                column_3.append(f"{role_header}\n{content}")
+
+        # Ajout des colonnes au message embed
+        embed.add_field(name="\u2003", value="\n\n".join(column_1), inline=True)
+        embed.add_field(name="\u2003", value="\n\n".join(column_2), inline=True)
+        embed.add_field(name="\u2003", value="\n\n".join(column_3), inline=True)
 
         if war.recap_message:
             await war.recap_message.edit(embed=embed)
         else:
             war.recap_message = await channel.send(embed=embed)
+
+
+
 
 
 @bot.tree.command(name="nextwar", description="Créer une guerre interactive.")
