@@ -37,6 +37,7 @@ class War:
         }
         self.recap_message = None
         self.recap_lock = asyncio.Lock()
+        self.user_specs = {}
 
 
 class RegistrationView(View):
@@ -63,17 +64,29 @@ class RoleSelect(Select):
             await interaction.response.defer(ephemeral=True)
             role = self.values[0]
 
-            # Inclure le discord_id dans les données utilisateur
+            war = wars[self.war_id]
+            user_id = interaction.user.id
+
+            # Initialiser le compteur `spec` pour cet utilisateur s'il n'existe pas
+            if user_id not in war.user_specs:
+                war.user_specs[user_id] = 1
+
+            # Récupérer et incrémenter le prochain `spec`
+            spec = war.user_specs[user_id]
+            war.user_specs[user_id] += 1
+
+            # Inclure le discord_id, rôle, et spec dans les données utilisateur
             user_data = {
                 "name": interaction.user.display_name,
                 "discord_id": interaction.user.id,
-                "role": role
+                "role": role,
+                "spec": spec
             }
 
             # Transition vers la sélection du poids d'armure
             armor_view = ArmorWeightView(self.war_id, user_data)
             await interaction.followup.send(
-                content=f"Vous avez sélectionné : **{role}**.\nChoisissez votre poids d'armure :",
+                content=f"Vous avez sélectionné : **{role}** (spec: {spec}).\nChoisissez votre poids d'armure :",
                 view=armor_view,
                 ephemeral=True
             )
@@ -173,7 +186,8 @@ class WeaponSelect(Select):
                     "discord_id": self.user_data["discord_id"],
                     "weight": self.user_data["armor"],
                     "weapon": self.user_data["weapon1"],
-                    "weapon_2": self.user_data["weapon2"]
+                    "weapon_2": self.user_data["weapon2"],
+                    "spec": self.user_data["spec"]
                 })
 
                 # Mise à jour immédiate du récapitulatif
