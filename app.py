@@ -86,19 +86,19 @@ class RoleSelect(Select):
             war = wars[self.war_id]
             user_id = interaction.user.id
 
-            # Vérifier si l'utilisateur est dans la liste "Absent" et le retirer
-            if "Absent" in war.registrations:
+
+            if user_id in [participant["discord_id"] for participant in war.registrations["Absent"]]:
                 war.registrations["Absent"] = [
                     participant for participant in war.registrations["Absent"]
                     if participant["discord_id"] != user_id
                 ]
 
-            # Si le rôle sélectionné est "Absent"
+            
             if role == "Absent":
                 war.registrations[role].append({
                     "name": interaction.user.display_name,
                     "discord_id": user_id,
-                    "spec": 1  # Pas de spec nécessaire pour "Absent"
+                    "spec": 1 
                 })
 
                 await update_recap_message(self.war_id, interaction.channel)
