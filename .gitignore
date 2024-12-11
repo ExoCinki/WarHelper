@@ -1,2 +1,3 @@
 venv
 war_participants.json
+.env

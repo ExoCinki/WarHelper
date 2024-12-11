@@ -140,8 +140,8 @@ class WeaponSelect(Select):
     def __init__(self, war_id, user_data, placeholder):
         super().__init__(placeholder=placeholder, options=[
             discord.SelectOption(label="SnS", description="Épée et Bouclier", emoji="🛡️"),
-            discord.SelectOption(label="FnS", description="Hachette et Bouclier", emoji="🪓"),
-            discord.SelectOption(label="WH", description="Marteau de Guerre", emoji="🔨"),
+            discord.SelectOption(label="FnS", description="Fléau et Bouclier", emoji="🪓"),
+            discord.SelectOption(label="WH", description="Marteau", emoji="🔨"),
             discord.SelectOption(label="GA", description="Hache Double", emoji="🪓"),
             discord.SelectOption(label="Spear", description="Lance", emoji="🔱"),
             discord.SelectOption(label="Hatchet", description="Hachette", emoji="🪓"),
@@ -153,7 +153,7 @@ class WeaponSelect(Select):
             discord.SelectOption(label="VG", description="Gantelet du Néant", emoji="⚫"),
             discord.SelectOption(label="Rapier", description="Rapière", emoji="🗡️"),
             discord.SelectOption(label="BB", description="Tromblon", emoji="🎇"),
-            discord.SelectOption(label="GS", description="Grande Épée", emoji="⚔️")
+            discord.SelectOption(label="GS", description="Glaive", emoji="⚔️")
         ])
         self.war_id = war_id
         self.user_data = user_data
