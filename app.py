@@ -18,9 +18,26 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-
+# Gestions des tableau de guerres
 wars = {}  
 
+
+# Role IDs autorisés pour les commandes
+ALLOWED_ROLE_IDS = [ 
+    1311100972113858600, # Gouverneur
+    1311101366063730748, # Consul
+    1311101618627936329, # Officier
+    1311126111249371218 # RaidLead
+] 
+
+
+def has_allowed_role():
+    async def predicate(ctx):
+        if ctx.author.guild_permissions.administrator:
+            return True
+        user_role_ids = [role.id for role in ctx.author.roles]
+        return any(role_id in ALLOWED_ROLE_IDS for role_id in user_role_ids)
+    return commands.check(predicate)
 
 class War:
     """Classe représentant une guerre."""
@@ -33,7 +50,8 @@ class War:
             "Debuffer": [],
             "Bruiser": [],
             "Assassins": [],
-            "DPS": []
+            "DPS": [],
+            "Absent": []
         }
         self.recap_message = None
         self.recap_lock = asyncio.Lock()
@@ -55,7 +73,8 @@ class RoleSelect(Select):
             discord.SelectOption(label="Debuffer", emoji="🌀"),
             discord.SelectOption(label="Bruiser", emoji="⚔️"),
             discord.SelectOption(label="Assassins", emoji="🔪"),
-            discord.SelectOption(label="DPS", emoji="🔥")
+            discord.SelectOption(label="DPS", emoji="🔥"),
+            discord.SelectOption(label="Absent", emoji="🚫")  # Nouvelle option "Absent"
         ])
         self.war_id = war_id
 
@@ -67,23 +86,43 @@ class RoleSelect(Select):
             war = wars[self.war_id]
             user_id = interaction.user.id
 
-            
+            # Vérifier si l'utilisateur est dans la liste "Absent" et le retirer
+            if "Absent" in war.registrations:
+                war.registrations["Absent"] = [
+                    participant for participant in war.registrations["Absent"]
+                    if participant["discord_id"] != user_id
+                ]
+
+            # Si le rôle sélectionné est "Absent"
+            if role == "Absent":
+                war.registrations[role].append({
+                    "name": interaction.user.display_name,
+                    "discord_id": user_id,
+                    "spec": 1  # Pas de spec nécessaire pour "Absent"
+                })
+
+                await update_recap_message(self.war_id, interaction.channel)
+                await interaction.followup.send(
+                    f"Vous avez été marqué comme **Absent** pour la guerre.",
+                    ephemeral=True
+                )
+                return
+
+            # Si un autre rôle est sélectionné
             if user_id not in war.user_specs:
                 war.user_specs[user_id] = 1
 
-            
             spec = war.user_specs[user_id]
             war.user_specs[user_id] += 1
 
-            
             user_data = {
                 "name": interaction.user.display_name,
-                "discord_id": interaction.user.id,
+                "discord_id": user_id,
                 "role": role,
                 "spec": spec
             }
 
-            
+            # Passer au processus normal de sélection d'armure
             armor_view = ArmorWeightView(self.war_id, user_data)
             await interaction.followup.send(
                 content=f"Vous avez sélectionné : **{role}** (spec: {spec}).\nChoisissez votre poids d'armure :",
@@ -93,6 +132,7 @@ class RoleSelect(Select):
         except Exception as e:
             print(f"Erreur dans RoleSelect callback : {e}")
             await interaction.followup.send("Une erreur est survenue.", ephemeral=True)
+
 
 
 
@@ -207,12 +247,11 @@ async def update_recap_message(war_id, channel):
     war = wars[war_id]
 
     async with war.recap_lock:
-        
         unique_users = set()
         for participants in war.registrations.values():
             unique_users.update(p["discord_id"] for p in participants)
 
-        total_inscriptions = len(unique_users)  
+        total_inscriptions = len(unique_users)
 
         embed = discord.Embed(
             title=f"{war.name} (ID: {war.id})   \u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003.",
@@ -220,48 +259,49 @@ async def update_recap_message(war_id, channel):
             color=discord.Color.blue()
         )
 
-       
         emoji_mapping = {
-            "Tank": "🛡️",    
-            "Healer": "💉",    
-            "Debuffer": "🌀", 
-            "Bruiser": "⚔️",   
-            "Assassins": "🔪", 
-            "DPS": "🔥"        
+            "Tank": "🛡️",
+            "Healer": "💉",
+            "Debuffer": "🌀",
+            "Bruiser": "⚔️",
+            "Assassins": "🔪",
+            "DPS": "🔥",
+            "Absent": "🚫"
         }
 
-        
-        roles = ["Tank", "Healer", "Debuffer", "Bruiser", "Assassins", "DPS"]
+        roles = ["Tank", "Healer", "Debuffer", "Bruiser", "Assassins", "DPS", "Absent"]
         column_1 = []
         column_2 = []
 
         for i, role in enumerate(roles):
             participants = war.registrations[role]
-            emoji = emoji_mapping.get(role, "")  # Ajoute l'émoji associé
+            emoji = emoji_mapping.get(role, "")
 
-            
             role_total = len(participants)
 
-            
+            # Construire le contenu pour chaque rôle
             content = "\n".join(
-                [f"**{p['name']}** ({p['weight']} | {p['weapon']} + {p['weapon_2']})" for p in participants]
+                [
+                    f"**{p['name']}**"
+                    + (f" ({p.get('weight', 'N/A')} | {p.get('weapon', 'N/A')} + {p.get('weapon_2', 'N/A')})" if role != "Absent" else "")
+                    for p in participants
+                ]
             ) or "*Aucun inscrit*"
 
-           
             role_header = f"{emoji} **{role} ({role_total})**"
             role_content = f"{role_header}\n{content}"
 
-            
-            if i % 2 == 0:  
+            # Répartir entre les colonnes
+            if i % 2 == 0:
                 column_1.append(role_content)
-            else:          
+            else:
                 column_2.append(role_content)
 
-      
+        # Ajouter les colonnes à l'embed
         embed.add_field(name="", value="\n\n".join(column_1), inline=True)
         embed.add_field(name="", value="\n\n".join(column_2), inline=True)
 
-        
+        # Envoyer ou mettre à jour le message de récapitulatif
         if war.recap_message:
             await war.recap_message.edit(embed=embed)
         else:
@@ -272,7 +312,9 @@ async def update_recap_message(war_id, channel):
 
 
 
+
 @bot.tree.command(name="nextwar", description="Créer une guerre interactive.")
+@has_allowed_role()
 @app_commands.describe(title="Titre de la guerre (facultatif)")
 async def nextwar(interaction: discord.Interaction, title: str = None):
     await interaction.response.defer()
@@ -293,6 +335,7 @@ async def nextwar(interaction: discord.Interaction, title: str = None):
 
 
 @bot.tree.command(name="export_json", description="Exporter les données d'une guerre au format JSON.")
+@has_allowed_role()
 @app_commands.describe(war_id="L'ID de la guerre à exporter")
 async def export_json(interaction: discord.Interaction, war_id: int):
     await interaction.response.defer(ephemeral=True)
@@ -324,6 +367,60 @@ async def export_json(interaction: discord.Interaction, war_id: int):
     finally:
         if os.path.exists(filename):
             os.remove(filename)
+
+
+@bot.tree.command(name="ping", description="Ping les personnes avec un rôle spécifique qui ne sont pas inscrites.")
+@has_allowed_role()
+@app_commands.describe(war_id="L'ID de la guerre pour vérifier les inscriptions")
+async def ping(interaction: discord.Interaction, war_id: int):
+    await interaction.response.defer()  # Pas d'éphémère ici, on prépare une réponse publique
+
+    # Vérifier si la guerre existe
+    if war_id not in wars:
+        await interaction.followup.send(f"Aucune guerre trouvée avec l'ID {war_id}.")
+        return
+
+    war = wars[war_id]
+
+    # ID du rôle à vérifier
+    ROLE_ID_TO_CHECK = 1311102143012405352  # Remplace par l'ID correct
+
+    # Récupérer tous les membres ayant le rôle
+    guild = interaction.guild
+    role = guild.get_role(ROLE_ID_TO_CHECK)
+
+    if not role:
+        await interaction.followup.send(f"Le rôle avec l'ID {ROLE_ID_TO_CHECK} est introuvable.")
+        return
+
+    # Collecte des membres ayant ce rôle
+    role_members = set(member.id for member in role.members)
+
+    # Collecte des membres déjà inscrits
+    registered_members = set(
+        participant["discord_id"]
+        for participants in war.registrations.values()
+        for participant in participants
+    )
+
+    # Membres non inscrits ayant le rôle
+    unregistered_members = role_members - registered_members
+
+    if not unregistered_members:
+        await interaction.followup.send("Tous les membres avec ce rôle sont inscrits.")
+        return
+
+    # Construire les mentions par lots
+    mentions = [f"<@{member_id}>" for member_id in unregistered_members]
+    chunks = [mentions[i:i+50] for i in range(0, len(mentions), 50)]  # 50 mentions par message max
+
+    # Envoyer le message principal avec les pings
+    first_message = f"Les membres suivants ne sont pas inscrits à la guerre **{war.name}** :"
+    await interaction.channel.send(first_message)
+
+    # Envoyer les pings en plusieurs lots
+    for chunk in chunks:
+        await interaction.channel.send(' '.join(chunk))
 
 
 @bot.event
