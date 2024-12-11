@@ -86,8 +86,8 @@ class RoleSelect(Select):
             war = wars[self.war_id]
             user_id = interaction.user.id
 
-
-            if user_id in [participant["discord_id"] for participant in war.registrations["Absent"]]:
+            
+            if role != "Absent":
                 war.registrations["Absent"] = [
                     participant for participant in war.registrations["Absent"]
                     if participant["discord_id"] != user_id
@@ -95,10 +95,17 @@ class RoleSelect(Select):
 
             
             if role == "Absent":
+                for role_name, participants in war.registrations.items():
+                    war.registrations[role_name] = [
+                        participant for participant in participants
+                        if participant["discord_id"] != user_id
+                    ]
+
+                
                 war.registrations[role].append({
                     "name": interaction.user.display_name,
                     "discord_id": user_id,
-                    "spec": 1 
+                    "spec": 1  
                 })
 
                 await update_recap_message(self.war_id, interaction.channel)
@@ -108,7 +115,7 @@ class RoleSelect(Select):
                 )
                 return
 
-            # Si un autre rôle est sélectionné
+            
             if user_id not in war.user_specs:
                 war.user_specs[user_id] = 1
 
@@ -122,7 +129,7 @@ class RoleSelect(Select):
                 "spec": spec
             }
 
-            # Passer au processus normal de sélection d'armure
+           
             armor_view = ArmorWeightView(self.war_id, user_data)
             await interaction.followup.send(
                 content=f"Vous avez sélectionné : **{role}** (spec: {spec}).\nChoisissez votre poids d'armure :",
@@ -132,6 +139,7 @@ class RoleSelect(Select):
         except Exception as e:
             print(f"Erreur dans RoleSelect callback : {e}")
             await interaction.followup.send("Une erreur est survenue.", ephemeral=True)
+
 
 
 
@@ -279,7 +287,7 @@ async def update_recap_message(war_id, channel):
 
             role_total = len(participants)
 
-            # Construire le contenu pour chaque rôle
+            
             content = "\n".join(
                 [
                     f"**{p['name']}**"
@@ -291,17 +299,17 @@ async def update_recap_message(war_id, channel):
             role_header = f"{emoji} **{role} ({role_total})**"
             role_content = f"{role_header}\n{content}"
 
-            # Répartir entre les colonnes
+            
             if i % 2 == 0:
                 column_1.append(role_content)
             else:
                 column_2.append(role_content)
 
-        # Ajouter les colonnes à l'embed
+        
         embed.add_field(name="", value="\n\n".join(column_1), inline=True)
         embed.add_field(name="", value="\n\n".join(column_2), inline=True)
 
-        # Envoyer ou mettre à jour le message de récapitulatif
+        
         if war.recap_message:
             await war.recap_message.edit(embed=embed)
         else:
@@ -345,10 +353,17 @@ async def export_json(interaction: discord.Interaction, war_id: int):
         return
 
     war = wars[war_id]
+
+    filtered_registrations = {
+        role: participants
+        for role, participants in war.registrations.items()
+        if role != "Absent"
+    }
+
     war_data = {
         "id": war.id,
         "name": war.name,
-        "registrations": war.registrations
+        "registrations": filtered_registrations
     }
     filename = f"war_{war_id}.json"
 
@@ -383,7 +398,7 @@ async def ping(interaction: discord.Interaction, war_id: int):
     war = wars[war_id]
 
     # ID du rôle à vérifier
-    ROLE_ID_TO_CHECK = 1311102143012405352  # Remplace par l'ID correct
+    ROLE_ID_TO_CHECK = 1311102143012405352  
 
     # Récupérer tous les membres ayant le rôle
     guild = interaction.guild
@@ -414,11 +429,11 @@ async def ping(interaction: discord.Interaction, war_id: int):
     mentions = [f"<@{member_id}>" for member_id in unregistered_members]
     chunks = [mentions[i:i+50] for i in range(0, len(mentions), 50)]  # 50 mentions par message max
 
-    # Envoyer le message principal avec les pings
+    
     first_message = f"Les membres suivants ne sont pas inscrits à la guerre **{war.name}** :"
     await interaction.channel.send(first_message)
 
-    # Envoyer les pings en plusieurs lots
+    
     for chunk in chunks:
         await interaction.channel.send(' '.join(chunk))
 
