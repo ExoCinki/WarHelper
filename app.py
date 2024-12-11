@@ -7,26 +7,26 @@ import json
 import os
 from dotenv import load_dotenv
 
-# Charger les variables d'environnement
+
 load_dotenv()
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
-# Initialisation du bot avec les intents nécessaires
+
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-# Structure pour stocker les données des guerres
-wars = {}  # Dictionnaire où chaque clé est un identifiant de guerre
+
+wars = {}  
 
 
 class War:
     """Classe représentant une guerre."""
     def __init__(self, id):
         self.id = id
-        self.name = f"Guerre {id}"  # Nom par défaut basé sur l'ID
+        self.name = f"Guerre {id}" 
         self.registrations = {
             "Tank": [],
             "Healer": [],
@@ -67,15 +67,15 @@ class RoleSelect(Select):
             war = wars[self.war_id]
             user_id = interaction.user.id
 
-            # Initialiser le compteur `spec` pour cet utilisateur s'il n'existe pas
+            
             if user_id not in war.user_specs:
                 war.user_specs[user_id] = 1
 
-            # Récupérer et incrémenter le prochain `spec`
+            
             spec = war.user_specs[user_id]
             war.user_specs[user_id] += 1
 
-            # Inclure le discord_id, rôle, et spec dans les données utilisateur
+            
             user_data = {
                 "name": interaction.user.display_name,
                 "discord_id": interaction.user.id,
@@ -83,7 +83,7 @@ class RoleSelect(Select):
                 "spec": spec
             }
 
-            # Transition vers la sélection du poids d'armure
+            
             armor_view = ArmorWeightView(self.war_id, user_data)
             await interaction.followup.send(
                 content=f"Vous avez sélectionné : **{role}** (spec: {spec}).\nChoisissez votre poids d'armure :",
@@ -105,9 +105,9 @@ class ArmorWeightView(View):
 class ArmorWeightSelect(Select):
     def __init__(self, war_id, user_data):
         super().__init__(placeholder="Choisissez un poids d'armure", options=[
-            discord.SelectOption(label="Léger", emoji="⚡"),   # Symbole pour léger
-            discord.SelectOption(label="Moyen", emoji="🏋️"), # Symbole pour moyen
-            discord.SelectOption(label="Lourd", emoji="🛡️")  # Symbole pour lourd
+            discord.SelectOption(label="Léger", emoji="⚡"),   
+            discord.SelectOption(label="Moyen", emoji="🏋️"),
+            discord.SelectOption(label="Lourd", emoji="🛡️") 
         ])
         self.war_id = war_id
         self.user_data = user_data
@@ -117,7 +117,7 @@ class ArmorWeightSelect(Select):
             await interaction.response.defer(ephemeral=True)
             self.user_data["armor"] = self.values[0]
 
-            # Transition vers la sélection de la première arme
+            
             weapon1_view = WeaponSelectView(self.war_id, self.user_data, "Arme 1")
             await interaction.followup.send(
                 content="Choisissez votre première arme :",
@@ -190,7 +190,7 @@ class WeaponSelect(Select):
                     "spec": self.user_data["spec"]
                 })
 
-                # Mise à jour immédiate du récapitulatif
+               
                 await update_recap_message(self.war_id, interaction.channel)
                 await interaction.followup.send(
                     "Votre inscription a été enregistrée !",
@@ -207,12 +207,12 @@ async def update_recap_message(war_id, channel):
     war = wars[war_id]
 
     async with war.recap_lock:
-        # Extraire les IDs uniques
+        
         unique_users = set()
         for participants in war.registrations.values():
             unique_users.update(p["discord_id"] for p in participants)
 
-        total_inscriptions = len(unique_users)  # Nombre d'utilisateurs uniques
+        total_inscriptions = len(unique_users)  
 
         embed = discord.Embed(
             title=f"{war.name} (ID: {war.id})   \u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003\u2003.",
@@ -220,17 +220,17 @@ async def update_recap_message(war_id, channel):
             color=discord.Color.blue()
         )
 
-        # Ajouter des émojis pour chaque rôle
+       
         emoji_mapping = {
-            "Tank": "🛡️",      # Bouclier
-            "Healer": "💉",    # Seringue ou soin
-            "Debuffer": "🌀",  # Vortex
-            "Bruiser": "⚔️",   # Épées croisées
-            "Assassins": "🔪", # Couteau
-            "DPS": "🔥"        # Feu
+            "Tank": "🛡️",    
+            "Healer": "💉",    
+            "Debuffer": "🌀", 
+            "Bruiser": "⚔️",   
+            "Assassins": "🔪", 
+            "DPS": "🔥"        
         }
 
-        # Diviser les rôles en deux colonnes
+        
         roles = ["Tank", "Healer", "Debuffer", "Bruiser", "Assassins", "DPS"]
         column_1 = []
         column_2 = []
@@ -239,29 +239,29 @@ async def update_recap_message(war_id, channel):
             participants = war.registrations[role]
             emoji = emoji_mapping.get(role, "")  # Ajoute l'émoji associé
 
-            # Total des participants pour ce rôle
+            
             role_total = len(participants)
 
-            # Contenu des participants
+            
             content = "\n".join(
                 [f"**{p['name']}** ({p['weight']} | {p['weapon']} + {p['weapon_2']})" for p in participants]
             ) or "*Aucun inscrit*"
 
-            # Ajouter l'émoji, le rôle et le total
+           
             role_header = f"{emoji} **{role} ({role_total})**"
             role_content = f"{role_header}\n{content}"
 
-            # Répartir les rôles entre les colonnes
-            if i % 2 == 0:  # Rôles pairs dans la colonne 1
+            
+            if i % 2 == 0:  
                 column_1.append(role_content)
-            else:           # Rôles impairs dans la colonne 2
+            else:          
                 column_2.append(role_content)
 
-        # Ajouter les colonnes au message embed
+      
         embed.add_field(name="", value="\n\n".join(column_1), inline=True)
         embed.add_field(name="", value="\n\n".join(column_2), inline=True)
 
-        # Éditer ou envoyer le message récapitulatif
+        
         if war.recap_message:
             await war.recap_message.edit(embed=embed)
         else:
